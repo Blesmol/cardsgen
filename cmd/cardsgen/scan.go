@@ -22,12 +22,25 @@ var blankLines = regexp.MustCompile(`\n{2,}`)
 var mdInlineImage = regexp.MustCompile(`!\[([^\]]*)\]\(([^)]+)\)`)
 var htmlH1 = regexp.MustCompile(`(?i)<h1[^>]*>(.*?)</h1>`)
 
+type templateKind string
+
+const (
+	templateMarkdown templateKind = "markdown"
+	templateHTML     templateKind = "html"
+)
+
+// templateEntry holds a loaded template and its format kind.
+type templateEntry struct {
+	content string
+	kind    templateKind
+}
+
 // scanCategories walks root and groups items (markdown and txt) by their
 // top-level directory (the category). Files directly in root are ignored.
 func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 	// Accumulators: items grouped by category name, templates keyed by category, and txt files deferred for later.
 	byName := map[string][]Item{}
-	templates := map[string]string{} // absolute directory path → template content
+	templates := map[string]templateEntry{} // absolute directory path → template
 
 	type pendingTxt struct {
 		path  string
@@ -64,12 +77,24 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 		// Dispatch by file type: store templates, parse markdown items, defer txt files.
 		switch {
 		case ext == ".md" && strings.EqualFold(d.Name(), "template.md"):
+			if _, exists := templates[filepath.Dir(path)]; exists {
+				return fmt.Errorf("%s: directory already contains a template file", rel)
+			}
 			data, err := os.ReadFile(path)
 			if err != nil {
 				return fmt.Errorf("%s: %w", rel, err)
 			}
-			content := stripBOM(string(data))
-			templates[filepath.Dir(path)] = content
+			templates[filepath.Dir(path)] = templateEntry{content: stripBOM(string(data)), kind: templateMarkdown}
+
+		case ext == ".html" && strings.EqualFold(d.Name(), "template.html"):
+			if _, exists := templates[filepath.Dir(path)]; exists {
+				return fmt.Errorf("%s: directory already contains a template file", rel)
+			}
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return fmt.Errorf("%s: %w", rel, err)
+			}
+			templates[filepath.Dir(path)] = templateEntry{content: stripBOM(string(data)), kind: templateHTML}
 
 		case ext == ".md" || ext == ".html":
 			item, err := parseItem(path, parts)
@@ -92,7 +117,7 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 	for _, p := range txtPending {
 		tmpl, ok := resolveTemplate(root, filepath.Dir(p.path), templates)
 		if !ok {
-			return nil, fmt.Errorf("%s: no template.md found in directory or any parent up to %s",
+			return nil, fmt.Errorf("%s: no template found in directory or any parent up to %s",
 				filepath.Join(p.parts...), root)
 		}
 		item, err := parseTxtItem(p.path, p.parts, tmpl)
@@ -135,8 +160,8 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 }
 
 // resolveTemplate walks up from dir toward root (inclusive) returning the first
-// template.md content found. Returns "", false if none exists in any ancestor.
-func resolveTemplate(root, dir string, templates map[string]string) (string, bool) {
+// template entry found. Returns zero value, false if none exists in any ancestor.
+func resolveTemplate(root, dir string, templates map[string]templateEntry) (templateEntry, bool) {
 	for {
 		if tmpl, ok := templates[dir]; ok {
 			return tmpl, true
@@ -150,7 +175,7 @@ func resolveTemplate(root, dir string, templates map[string]string) (string, boo
 		}
 		dir = parent
 	}
-	return "", false
+	return templateEntry{}, false
 }
 
 // parseItem reads a markdown file and builds an Item. parts is the file path
@@ -189,15 +214,20 @@ func parseItem(path string, parts []string) (Item, error) {
 
 // parseTxtItem reads a key-value txt file, applies the category template, and
 // returns the resulting Item.
-func parseTxtItem(path string, parts []string, tmpl string) (Item, error) {
+func parseTxtItem(path string, parts []string, tmpl templateEntry) (Item, error) {
 	kv, err := parseKVFile(path)
 	if err != nil {
 		return Item{}, err
 	}
 
-	rendered := applyTemplate(tmpl, kv, filepath.Join(parts...))
+	rendered := applyTemplate(tmpl.content, kv, filepath.Join(parts...))
 
-	title, body := splitMarkdownTitle(rendered)
+	var title, body string
+	if tmpl.kind == templateHTML {
+		title, body = splitHTMLTitle(rendered)
+	} else {
+		title, body = splitMarkdownTitle(rendered)
+	}
 	if title == "" {
 		title = strings.TrimSuffix(parts[len(parts)-1], filepath.Ext(parts[len(parts)-1]))
 	}
