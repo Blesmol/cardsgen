@@ -126,3 +126,13 @@ body {
 .card-body table.left   { width: auto; margin-right: auto; }
 .card-body table.center { width: auto; margin-left: auto; margin-right: auto; }
 .card-body table.right  { width: auto; margin-left: auto; }
+
+/* Same, but via pandoc fenced div wrapper: ::: {.center} ... ::: */
+.card-body .left  > table { width: auto; margin-right: auto; }
+.card-body .center > table { width: auto; margin-left: auto; margin-right: auto; }
+.card-body .right > table { width: auto; margin-left: auto; }
+
+/* Reset cell text-align so the wrapper class only affects table position, not cell content */
+.card-body .left  > table th, .card-body .left  > table td,
+.card-body .center > table th, .card-body .center > table td,
+.card-body .right  > table th, .card-body .right  > table td { text-align: left; }
