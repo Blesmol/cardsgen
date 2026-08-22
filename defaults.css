@@ -1,12 +1,12 @@
-/* Base card styling for ttrpgcards.
+/* Base card styling for cardsgen.
  *
- * This file is the editable template. At generation time the app prepends the
- * @page rule (paper size and margins) and appends the per-category grid and
- * color rules, which depend on the configured layout and the categories found
- * on disk. Edit the static look-and-feel here; layout math stays in the app.
+ * This file contains the default CSS styling for cardsgen.
+ * It is used as a template to generate the final CSS file that is applied to
+ * the generated cards.
  *
- * The app reads this file at run time (default: ./defaults.css). Point at
- * a different file with -css-template <path>.
+ * Do not modify this file directly. Instead, create a custom CSS file in your
+ * cards directory that contains overwrites for the default styles.
+ * (FUNCTIONALITY STILL NEEDS TO BE ADDED)
  */
 
 * { box-sizing: border-box; }
