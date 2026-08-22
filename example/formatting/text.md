@@ -1,4 +1,4 @@
-# Text Formatting
+# Text
 
 * Normal text
 * *italics*

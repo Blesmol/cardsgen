@@ -1,4 +1,4 @@
-# Formatting Overview
+# A Formatting Overview
 
 Formatting can be done in Markdown. Or HTML. Or both mixed in the same file.
 

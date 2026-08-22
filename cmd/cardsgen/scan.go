@@ -21,6 +21,7 @@ var mdInlineImage = regexp.MustCompile(`!\[([^\]]*)\]\(([^)]+)\)`)
 // scanCategories walks root and groups items (markdown and txt) by their
 // top-level directory (the category). Files directly in root are ignored.
 func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
+	// Accumulators: items grouped by category name, templates keyed by category, and txt files deferred for later.
 	byName := map[string][]Item{}
 	templates := map[string]string{} // category name → template content
 
@@ -30,10 +31,12 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 	}
 	var txtPending []pendingTxt
 
+	// Walk the directory tree, classifying each file by extension.
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
+		// Skip hidden directories; descend into all others.
 		if d.IsDir() {
 			if path != root && strings.HasPrefix(d.Name(), ".") {
 				return filepath.SkipDir
@@ -43,6 +46,8 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 
 		ext := strings.ToLower(filepath.Ext(d.Name()))
 
+		// Build a slash-separated path relative to root and split into parts;
+		// the first part is the category name.
 		rel, err := filepath.Rel(root, path)
 		if err != nil {
 			return err
@@ -52,6 +57,7 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 			return nil // file directly in root; not a card
 		}
 
+		// Dispatch by file type: store templates, parse markdown items, defer txt files.
 		switch {
 		case ext == ".md" && strings.EqualFold(d.Name(), "template.md"):
 			// Load as a category template; only recognised at the top level of a
@@ -98,12 +104,14 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 		byName[item.Category] = append(byName[item.Category], item)
 	}
 
+	// Collect and sort category names for deterministic output order.
 	names := make([]string, 0, len(byName))
 	for name := range byName {
 		names = append(names, name)
 	}
 	sort.Strings(names)
 
+	// Build the final Category slice, sorting items alphabetically within each category.
 	categories := make([]Category, 0, len(names))
 	for _, name := range names {
 		items := byName[name]
