@@ -1,0 +1,8 @@
+# Separators
+
+Text
+
+---
+
+Other text
+

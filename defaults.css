@@ -86,5 +86,5 @@ body {
 .card-body hr {
   border: none;
   border-top: 1.5pt solid var(--card-color);
-  margin: 1.2mm 0;
+  margin: 1.2mm -2.4mm; /* negative margin to extend the line to the edges of the card */
 }

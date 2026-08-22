@@ -5,7 +5,7 @@ GO ?= go
 GOFLAGS ?=
 LDFLAGS ?= -s -w
 
-.PHONY: all build run test vet fmt tidy clean install
+.PHONY: all build run test vet fmt tidy clean install example
 
 all: build example
 
