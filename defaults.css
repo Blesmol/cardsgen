@@ -1,0 +1,90 @@
+/* Base card styling for ttrpgcards.
+ *
+ * This file is the editable template. At generation time the app prepends the
+ * @page rule (paper size and margins) and appends the per-category grid and
+ * color rules, which depend on the configured layout and the categories found
+ * on disk. Edit the static look-and-feel here; layout math stays in the app.
+ *
+ * The app reads this file at run time (default: ./defaults.css). Point at
+ * a different file with -css-template <path>.
+ */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Helvetica New", Arial, sans-serif;
+  color: #1a1a1a;
+}
+
+/* Start every category after the first on a fresh page. */
+.category + .category { break-before: page; }
+
+.card {
+  --card-color: #555555;
+  position: relative;
+  overflow: hidden; /* in case of too much text, do not overflow the card */
+  border: 1.5pt solid var(--card-color);
+  border-radius: 2mm;
+  background: #ffffff;
+  break-inside: avoid;
+}
+
+.card-bar {
+  position: relative;
+  z-index: 2;
+  background: var(--card-color);
+  color: #ffffff;
+  padding: 0.6mm 2mm;
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+/* Image banner as background */
+.card-watermark {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+.card-body {
+  position: relative;
+  z-index: 1;
+  padding: 2.4mm;
+  font-size: 8.5pt;
+  line-height: 1.25;
+}
+
+.card-body h1 {
+  margin: 0 0 1.5mm 0;
+  font-size: 12pt;
+  color: var(--card-color);
+}
+
+.card-body h2 {
+  margin: 0 0 1mm 0;
+  font-size: 9pt;
+  font-weight: 600;
+  color: #444444;
+}
+
+.card-body h3 {
+  margin: 0 0 0.8mm 0;
+  font-size: 8pt;
+  font-weight: 600;
+  color: #666666;
+}
+
+.card-body p { margin: 0 0 1.2mm 0; }
+
+.card-body hr {
+  border: none;
+  border-top: 1.5pt solid var(--card-color);
+  margin: 1.2mm 0;
+}
