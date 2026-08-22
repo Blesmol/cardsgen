@@ -24,7 +24,7 @@ var htmlH1 = regexp.MustCompile(`(?i)<h1[^>]*>(.*?)</h1>`)
 func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 	// Accumulators: items grouped by category name, templates keyed by category, and txt files deferred for later.
 	byName := map[string][]Item{}
-	templates := map[string]string{} // category name → template content
+	templates := map[string]string{} // absolute directory path → template content
 
 	type pendingTxt struct {
 		path  string
@@ -61,16 +61,12 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 		// Dispatch by file type: store templates, parse markdown items, defer txt files.
 		switch {
 		case ext == ".md" && strings.EqualFold(d.Name(), "template.md"):
-			// Load as a category template; only recognised at the top level of a
-			// category folder (len(parts)==2 means category/template.md).
-			if len(parts) == 2 {
-				data, err := os.ReadFile(path)
-				if err != nil {
-					return fmt.Errorf("%s: %w", rel, err)
-				}
-				content := strings.TrimPrefix(string(data), "\xEF\xBB\xBF")
-				templates[parts[0]] = content
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return fmt.Errorf("%s: %w", rel, err)
 			}
+			content := strings.TrimPrefix(string(data), "\xEF\xBB\xBF")
+			templates[filepath.Dir(path)] = content
 
 		case ext == ".md" || ext == ".html":
 			item, err := parseItem(path, parts)
@@ -91,12 +87,10 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 	// Process txt files after the walk so that template.md is always loaded
 	// before it is needed, regardless of filesystem ordering.
 	for _, p := range txtPending {
-		category := p.parts[0]
-		tmpl, ok := templates[category]
+		tmpl, ok := resolveTemplate(root, filepath.Dir(p.path), templates)
 		if !ok {
-			fmt.Fprintf(os.Stderr, "warning: %s: no template.md found in category %q, skipping\n",
-				filepath.Join(p.parts...), category)
-			continue
+			return nil, fmt.Errorf("%s: no template.md found in directory or any parent up to %s",
+				filepath.Join(p.parts...), root)
 		}
 		item, err := parseTxtItem(p.path, p.parts, tmpl)
 		if err != nil {
@@ -135,6 +129,25 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 		})
 	}
 	return categories, nil
+}
+
+// resolveTemplate walks up from dir toward root (inclusive) returning the first
+// template.md content found. Returns "", false if none exists in any ancestor.
+func resolveTemplate(root, dir string, templates map[string]string) (string, bool) {
+	for {
+		if tmpl, ok := templates[dir]; ok {
+			return tmpl, true
+		}
+		if dir == root {
+			break
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return "", false
 }
 
 // parseItem reads a markdown file and builds an Item. parts is the file path
