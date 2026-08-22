@@ -88,3 +88,41 @@ body {
   border-top: 1.5pt solid var(--card-color);
   margin: 1.2mm -2.4mm; /* negative margin to extend the line to the edges of the card */
 }
+
+/* Alignment helpers for pandoc fenced divs: ::: {.left} / {.right} / {.center} */
+.card-body .left  { text-align: left; }
+.card-body .center { text-align: center; }
+.card-body .right { text-align: right; }
+
+/* Tables */
+.card-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 8pt;
+  margin: 0 0 1.2mm 0;
+}
+
+.card-body th,
+.card-body td {
+  padding: 0.5mm 1.5mm;
+  border: 0.5pt solid rgba(0, 0, 0, 0.18);
+  text-align: left;
+  vertical-align: top;
+}
+
+.card-body th {
+  background: rgba(0, 0, 0, 0.08);
+  font-weight: 700;
+  /*color: var(--card-color);*/ /* Makes text in headers hard to read when category uses a light color */
+}
+
+/* Not yet sure if would be useful.
+.card-body tr:nth-child(even) td {
+  background: rgba(0, 0, 0, 0.03);
+}
+*/
+
+/* Table position — overrides full-width default; use on <table class="center"> etc. */
+.card-body table.left   { width: auto; margin-right: auto; }
+.card-body table.center { width: auto; margin-left: auto; margin-right: auto; }
+.card-body table.right  { width: auto; margin-left: auto; }
