@@ -17,6 +17,7 @@ var kvKeyLine = regexp.MustCompile(`^([^\s:]+):\s*(.*)$`)
 var templatePlaceholder = regexp.MustCompile(`\{([^}]+)\}`)
 var blankLines = regexp.MustCompile(`\n{2,}`)
 var mdInlineImage = regexp.MustCompile(`!\[([^\]]*)\]\(([^)]+)\)`)
+var htmlH1 = regexp.MustCompile(`(?i)<h1[^>]*>(.*?)</h1>`)
 
 // scanCategories walks root and groups items (markdown and txt) by their
 // top-level directory (the category). Files directly in root are ignored.
@@ -71,7 +72,7 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 				templates[parts[0]] = content
 			}
 
-		case ext == ".md":
+		case ext == ".md" || ext == ".html":
 			item, err := parseItem(path, parts)
 			if err != nil {
 				return fmt.Errorf("%s: %w", rel, err)
@@ -140,7 +141,13 @@ func parseItem(path string, parts []string) (Item, error) {
 	}
 	// Strip UTF-8 BOM (\xEF\xBB\xBF) that Windows editors sometimes prepend;
 	// without this the BOM appears as part of the first line and breaks title detection.
-	title, body := splitTitle(strings.TrimPrefix(string(data), "\xEF\xBB\xBF"))
+	content := strings.TrimPrefix(string(data), "\xEF\xBB\xBF")
+	var title, body string
+	if strings.ToLower(filepath.Ext(path)) == ".html" {
+		title, body = splitHTMLTitle(content)
+	} else {
+		title, body = splitMarkdownTitle(content)
+	}
 	if title == "" {
 		title = strings.TrimSuffix(parts[len(parts)-1], filepath.Ext(parts[len(parts)-1]))
 	}
@@ -170,7 +177,7 @@ func parseTxtItem(path string, parts []string, tmpl string) (Item, error) {
 
 	rendered := applyTemplate(tmpl, kv, filepath.Join(parts...))
 
-	title, body := splitTitle(rendered)
+	title, body := splitMarkdownTitle(rendered)
 	if title == "" {
 		title = strings.TrimSuffix(parts[len(parts)-1], filepath.Ext(parts[len(parts)-1]))
 	}
@@ -243,9 +250,9 @@ func applyTemplate(tmpl string, kv map[string]string, srcPath string) string {
 	})
 }
 
-// splitTitle extracts the first level-1 heading as the title and returns the
+// splitMarkdownTitle extracts the first level-1 heading as the title and returns the
 // remaining markdown as the body.
-func splitTitle(content string) (title, body string) {
+func splitMarkdownTitle(content string) (title, body string) {
 	lines := strings.Split(content, "\n")
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
@@ -258,9 +265,20 @@ func splitTitle(content string) (title, body string) {
 	return "", strings.TrimSpace(content)
 }
 
+// splitHTMLTitle extracts the first <h1> tag as the title and returns the
+// remaining HTML as the body, mirroring splitMarkdownTitle for markdown files.
+func splitHTMLTitle(content string) (title, body string) {
+	m := htmlH1.FindStringSubmatchIndex(content)
+	if m == nil {
+		return "", strings.TrimSpace(content)
+	}
+	title = strings.TrimSpace(content[m[2]:m[3]])
+	body = strings.TrimSpace(content[:m[0]] + content[m[1]:])
+	return title, body
+}
+
 // rewriteBodyImagePaths rewrites relative image paths in markdown body text so
-// they still resolve after the body is embedded into cards.md (which lives
-// at the repo root, not next to the source file). Absolute paths and URLs are
+// they still resolve after the body is embedded into cards.md. Absolute paths and URLs are
 // left unchanged. Relative paths are resolved against sourceDir and written
 // back using the CommonMark angle-bracket destination syntax
 // (![alt](<absolute path>)) so that spaces in directory names are handled
