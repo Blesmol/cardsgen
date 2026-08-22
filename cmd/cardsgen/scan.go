@@ -116,7 +116,12 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 	categories := make([]Category, 0, len(names))
 	for _, name := range names {
 		items := byName[name]
-		sort.Slice(items, func(i, j int) bool { return items[i].Title < items[j].Title })
+		sort.Slice(items, func(i, j int) bool {
+			if items[i].Subcategory != items[j].Subcategory {
+				return items[i].Subcategory < items[j].Subcategory
+			}
+			return items[i].Title < items[j].Title
+		})
 
 		grid, err := gridForCategory(cfg, name, global)
 		if err != nil {
