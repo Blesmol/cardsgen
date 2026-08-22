@@ -7,7 +7,7 @@ LDFLAGS ?= -s -w
 
 .PHONY: all build run test vet fmt tidy clean install
 
-all: build
+all: build example
 
 build:
 	$(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $(BINARY) $(PKG)
@@ -33,3 +33,6 @@ install:
 clean:
 	rm -f $(BINARY)
 	$(GO) clean
+
+example: $(BINARY)
+	./$(BINARY) example --pandoc
