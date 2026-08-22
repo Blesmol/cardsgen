@@ -7,19 +7,27 @@ import (
 )
 
 // buildMarkdown accumulates all categories into a single markdown document
-// using pandoc fenced divs. Each category is wrapped in its own grid container
-// so the CSS can page-break between categories and size cards per category.
+// using pandoc fenced divs. Each page's worth of cards gets its own grid
+// container div so CSS grid fragmentation is never needed — the renderer
+// places each div on a fresh page via the ".category + .category" rule.
 func buildMarkdown(categories []Category) string {
 	var b strings.Builder
 	for _, cat := range categories {
 		if len(cat.Items) == 0 {
 			continue
 		}
-		fmt.Fprintf(&b, "::::: {.category .category--%s}\n\n", cssName(cat.Name))
-		for _, item := range cat.Items {
-			writeCard(&b, cat, item)
+		perPage := cat.Grid.Cols * cat.Grid.Rows
+		for i := 0; i < len(cat.Items); i += perPage {
+			end := i + perPage
+			if end > len(cat.Items) {
+				end = len(cat.Items)
+			}
+			fmt.Fprintf(&b, "::::: {.category .category--%s}\n\n", cssName(cat.Name))
+			for _, item := range cat.Items[i:end] {
+				writeCard(&b, cat, item)
+			}
+			b.WriteString(":::::\n\n")
 		}
-		b.WriteString(":::::\n\n")
 	}
 	return b.String()
 }

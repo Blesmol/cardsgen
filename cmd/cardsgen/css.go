@@ -65,9 +65,12 @@ func buildCSS(cfg Config, paper PaperSize, categories []Category, template, over
 }
 
 // cardSize returns the width and height in millimetres for a single card given
-// the page, margins, gap, and grid.
+// the page, margins, gap, and grid. A 0.5 mm safety margin is subtracted from
+// the available height so that the last row never lands exactly on the page
+// boundary, which would cause sub-pixel rounding in the renderer to push it
+// onto the next page.
 func cardSize(paper PaperSize, margin, gap float64, grid Grid) (w, h float64) {
 	availW := paper.WidthMM - 2*margin - float64(grid.Cols-1)*gap
-	availH := paper.HeightMM - 2*margin - float64(grid.Rows-1)*gap
+	availH := paper.HeightMM - 2*margin - float64(grid.Rows-1)*gap - 0.5
 	return availW / float64(grid.Cols), availH / float64(grid.Rows)
 }
