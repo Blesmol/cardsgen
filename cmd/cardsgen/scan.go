@@ -13,6 +13,9 @@ import (
 // priority order when several exist for the same base name.
 var imageExtensions = []string{".png", ".jpg", ".jpeg", ".webp", ".gif"}
 
+// stripBOM removes a UTF-8 BOM that Windows editors sometimes prepend.
+func stripBOM(s string) string { return strings.TrimPrefix(s, "\xEF\xBB\xBF") }
+
 var kvKeyLine = regexp.MustCompile(`^([^\s:]+):\s*(.*)$`)
 var templatePlaceholder = regexp.MustCompile(`\{([^}]+)\}`)
 var blankLines = regexp.MustCompile(`\n{2,}`)
@@ -65,7 +68,7 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 			if err != nil {
 				return fmt.Errorf("%s: %w", rel, err)
 			}
-			content := strings.TrimPrefix(string(data), "\xEF\xBB\xBF")
+			content := stripBOM(string(data))
 			templates[filepath.Dir(path)] = content
 
 		case ext == ".md" || ext == ".html":
@@ -157,9 +160,8 @@ func parseItem(path string, parts []string) (Item, error) {
 	if err != nil {
 		return Item{}, err
 	}
-	// Strip UTF-8 BOM (\xEF\xBB\xBF) that Windows editors sometimes prepend;
-	// without this the BOM appears as part of the first line and breaks title detection.
-	content := strings.TrimPrefix(string(data), "\xEF\xBB\xBF")
+	// Strip UTF-8 BOM that Windows editors sometimes prepend.
+	content := stripBOM(string(data))
 	var title, body string
 	if strings.ToLower(filepath.Ext(path)) == ".html" {
 		title, body = splitHTMLTitle(content)
@@ -224,7 +226,7 @@ func parseKVFile(path string) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	content := strings.TrimPrefix(string(data), "\xEF\xBB\xBF")
+	content := stripBOM(string(data))
 	content = strings.ReplaceAll(content, "\r\n", "\n")
 	content = strings.ReplaceAll(content, "\r", "\n")
 
