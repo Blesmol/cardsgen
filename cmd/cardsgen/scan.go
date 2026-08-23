@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/csv"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -50,6 +51,7 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 	}
 	var txtPending []pendingFile
 	var yamlPending []pendingFile
+	var csvPending []pendingFile
 
 	// Walk the directory tree, classifying each file by extension.
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
@@ -111,6 +113,9 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 
 		case ext == ".yml" || ext == ".yaml":
 			yamlPending = append(yamlPending, pendingFile{path, parts})
+
+		case ext == ".csv":
+			csvPending = append(csvPending, pendingFile{path, parts})
 		}
 		return nil
 	})
@@ -141,6 +146,26 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 				filepath.Join(p.parts...), root)
 		}
 		kvMaps, err := parseYAMLItems(p.path)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", filepath.Join(p.parts...), err)
+		}
+		for _, kv := range kvMaps {
+			item, err := kvToItem(p.path, p.parts, tmpl, kv)
+			if err != nil {
+				return nil, fmt.Errorf("%s: %w", filepath.Join(p.parts...), err)
+			}
+			byName[item.Category] = append(byName[item.Category], item)
+		}
+	}
+
+	// Process CSV files; each data row becomes its own item.
+	for _, p := range csvPending {
+		tmpl, ok := resolveTemplate(root, filepath.Dir(p.path), templates)
+		if !ok {
+			return nil, fmt.Errorf("%s: no template found in directory or any parent up to %s",
+				filepath.Join(p.parts...), root)
+		}
+		kvMaps, err := parseCSVItems(p.path)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", filepath.Join(p.parts...), err)
 		}
@@ -436,4 +461,58 @@ func yamlMapToStrings(m map[string]interface{}) map[string]string {
 		}
 	}
 	return out
+}
+
+// detectCSVSeparator returns the separator rune to use for the given content.
+// It counts ';' and ',' on the first line; the more frequent one wins.
+// Ties (including no occurrences of either) default to comma.
+func detectCSVSeparator(content string) rune {
+	firstLine, _, _ := strings.Cut(content, "\n")
+	semis := strings.Count(firstLine, ";")
+	commas := strings.Count(firstLine, ",")
+	if semis > commas {
+		return ';'
+	}
+	return ','
+}
+
+// parseCSVItems reads a CSV file and returns one key-value map per data row.
+// The first row is treated as column headers. The separator is auto-detected.
+// Literal "\n" sequences in field values are replaced with actual newlines.
+func parseCSVItems(path string) ([]map[string]string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	content := stripBOM(string(data))
+	content = strings.ReplaceAll(content, "\r\n", "\n")
+	content = strings.ReplaceAll(content, "\r", "\n")
+
+	sep := detectCSVSeparator(content)
+
+	r := csv.NewReader(strings.NewReader(content))
+	r.Comma = sep
+
+	records, err := r.ReadAll()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse CSV: %w", err)
+	}
+	if len(records) < 1 {
+		return nil, nil
+	}
+
+	headers := records[0]
+	result := make([]map[string]string, 0, len(records)-1)
+	for _, row := range records[1:] {
+		kv := make(map[string]string, len(headers))
+		for i, h := range headers {
+			val := ""
+			if i < len(row) {
+				val = strings.ReplaceAll(row[i], `\n`, "\n")
+			}
+			kv[h] = val
+		}
+		result = append(result, kv)
+	}
+	return result, nil
 }

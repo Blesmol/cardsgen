@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -106,6 +107,98 @@ func TestParseYAMLItems_invalidYAML(t *testing.T) {
 	path := writeTemp(t, "bad.yml", "key: [unclosed\n")
 	if _, err := parseYAMLItems(path); err == nil {
 		t.Error("expected error for invalid YAML")
+	}
+}
+
+func TestDetectCSVSeparator(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    rune
+	}{
+		{"semicolons win", "a;b;c\n1;2;3\n", ';'},
+		{"commas win", "a,b,c\n1,2,3\n", ','},
+		{"tie defaults to comma", "a,b;c\n", ','},
+		{"no separator defaults to comma", "abc\n", ','},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := detectCSVSeparator(tc.content); got != tc.want {
+				t.Errorf("detectCSVSeparator(%q) = %q, want %q", tc.content, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestParseCSVItems_comma(t *testing.T) {
+	content := "name,size\nFoo,42\nBar,99\n"
+	path := writeTemp(t, "items.csv", content)
+	items, err := parseCSVItems(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("want 2 items, got %d", len(items))
+	}
+	if got := items[0]["name"]; got != "Foo" {
+		t.Errorf("items[0].name = %q, want %q", got, "Foo")
+	}
+	if got := items[1]["size"]; got != "99" {
+		t.Errorf("items[1].size = %q, want %q", got, "99")
+	}
+}
+
+func TestParseCSVItems_semicolon(t *testing.T) {
+	content := "name;size\nAlpha;1\nBeta;2\n"
+	path := writeTemp(t, "items.csv", content)
+	items, err := parseCSVItems(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("want 2 items, got %d", len(items))
+	}
+	if got := items[0]["name"]; got != "Alpha" {
+		t.Errorf("items[0].name = %q, want %q", got, "Alpha")
+	}
+}
+
+func TestParseCSVItems_newlineEscape(t *testing.T) {
+	content := "name,desc\nFoo,\"line one\\nline two\"\n"
+	path := writeTemp(t, "items.csv", content)
+	items, err := parseCSVItems(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("want 1 item, got %d", len(items))
+	}
+	desc := items[0]["desc"]
+	if !strings.Contains(desc, "\n") {
+		t.Errorf("expected actual newline in desc, got %q", desc)
+	}
+}
+
+func TestParseCSVItems_quotedFields(t *testing.T) {
+	content := "name,desc\n\"Foo, Bar\",\"hello world\"\n"
+	path := writeTemp(t, "items.csv", content)
+	items, err := parseCSVItems(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := items[0]["name"]; got != "Foo, Bar" {
+		t.Errorf("name = %q, want %q", got, "Foo, Bar")
+	}
+}
+
+func TestParseCSVItems_emptyFile(t *testing.T) {
+	path := writeTemp(t, "empty.csv", "")
+	items, err := parseCSVItems(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 0 {
+		t.Errorf("want 0 items, got %d", len(items))
 	}
 }
 
