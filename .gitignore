@@ -36,6 +36,5 @@ go.work.sum
 /cardsgen
 
 example/generated.*
-example/cards.pdf
 
 /private/
