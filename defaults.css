@@ -136,3 +136,25 @@ body {
 .card-body .left  > table th, .card-body .left  > table td,
 .card-body .center > table th, .card-body .center > table td,
 .card-body .right  > table th, .card-body .right  > table td { text-align: left; }
+
+/* Task list checkboxes */
+.card-body input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-block;
+  width: 1.1em;
+  height: 1.1em;
+  border: 1pt solid #555555;
+  border-radius: 1px;
+  vertical-align: middle;
+  margin-right: 0.3em;
+  background: #ffffff;
+}
+
+.card-body input[type="checkbox"]:checked {
+  background-color: #ffffff;
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M2 2 L8 8 M8 2 L2 8" stroke="%23555555" stroke-width="2" stroke-linecap="round"/></svg>');
+  background-size: 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+}

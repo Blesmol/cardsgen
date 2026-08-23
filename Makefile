@@ -35,4 +35,4 @@ clean:
 	$(GO) clean
 
 example: $(BINARY)
-	./$(BINARY) example --pandoc
+	./$(BINARY) example --pandoc --html
