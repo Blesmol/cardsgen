@@ -1,0 +1,49 @@
+version: 2
+
+project_name: cardsgen
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: cardsgen
+    main: ./cmd/cardsgen
+    binary: cardsgen
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - id: cardsgen
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_
+      {{- if eq .Os "darwin" }}macOS{{- else }}{{ .Os }}{{ end }}_
+      {{ .Arch }}
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    extra_files:
+      - defaults.css
+      - example/**/*
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
