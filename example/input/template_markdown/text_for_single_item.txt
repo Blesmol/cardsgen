@@ -1,4 +1,4 @@
-name: Text example
+name: Text Single Item Example
 size: 123
 multiline: This entry can span
 
