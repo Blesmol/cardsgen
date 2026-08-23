@@ -4,9 +4,8 @@
  * It is used as a template to generate the final CSS file that is applied to
  * the generated cards.
  *
- * Do not modify this file directly. Instead, create a custom CSS file in your
- * cards directory that contains overwrites for the default styles.
- * (FUNCTIONALITY STILL NEEDS TO BE ADDED)
+ * Do not modify this file directly. Instead, create a custom CSS file "cardsgen.css"
+ * in your cards directory that contains overwrites for the default styles.
  */
 
 * { box-sizing: border-box; }

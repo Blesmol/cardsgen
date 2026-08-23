@@ -95,7 +95,7 @@ To add a watermark image to a card, place an image file (`.png`, `.jpg`, `.jpeg`
 
 ## Customizing CSS
 
-Card styling is driven by `defaults.css`, which ships alongside the binary. To override or extend styles without modifying that file, create a `cardsgen.css` file next to `cardsgen.cfg` in the target directory. Its contents are appended after the generated stylesheet, so any rules there take precedence over the defaults.
+Card styling is driven by [`defaults.css`](defaults.css), which ships alongside the binary. To override or extend styles without modifying that file, create a `cardsgen.css` file next to `cardsgen.cfg` in the target directory. Its contents are appended after the generated stylesheet, so any rules there take precedence over the defaults.
 
 Useful things to override:
 
