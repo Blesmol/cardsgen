@@ -8,6 +8,8 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
+var version = "dev"
+
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
@@ -16,6 +18,7 @@ func main() {
 }
 
 func run() error {
+	versionFlag := flag.Bool("version", false, "print version and exit")
 	configPath := flag.String("config", "", "path to the TOML config file (default: <dir>/cardsgen.cfg)")
 	output := flag.String("output", "", "output PDF path (default: <dir>/cards.pdf)")
 	cssTemplate := flag.String("css-template", "", "path to the base CSS template (default: <exe-dir>/defaults.css)")
@@ -27,6 +30,11 @@ func run() error {
 	doHTML := flag.Bool("html", false, "also produce a standalone HTML file (generated.html)")
 	keepMD := flag.Bool("md", false, "keep the generated markdown and CSS files (generated.md, generated.css)")
 	flag.Parse()
+
+	if *versionFlag {
+		fmt.Println("cardsgen", version)
+		return nil
+	}
 
 	args := flag.Args()
 	if len(args) == 0 {
@@ -80,7 +88,7 @@ func run() error {
 		return fmt.Errorf("no category folders with markdown items found under %q", absDir)
 	}
 
-	markdown := buildMarkdown(categories)
+	markdown := buildMarkdown(categories, version)
 	if err := os.WriteFile(mdOut, []byte(markdown), 0o644); err != nil {
 		return fmt.Errorf("writing markdown %q: %w", mdOut, err)
 	}
@@ -93,7 +101,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	css := buildCSS(cfg, paperSize, categories, baseCSS, overrideCSS)
+	css := buildCSS(cfg, paperSize, categories, baseCSS, overrideCSS, version)
 	if err := os.WriteFile(cssOut, []byte(css), 0o644); err != nil {
 		return fmt.Errorf("writing stylesheet %q: %w", cssOut, err)
 	}
