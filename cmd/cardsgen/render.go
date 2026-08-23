@@ -22,11 +22,11 @@ func buildMarkdown(categories []Category) string {
 			if end > len(cat.Items) {
 				end = len(cat.Items)
 			}
-			fmt.Fprintf(&b, "::::: {.category .category--%s}\n\n", cssName(cat.Name))
+			fmt.Fprintf(&b, ":::::: {.category .category--%s}\n\n", cssName(cat.Name))
 			for _, item := range cat.Items[i:end] {
 				writeCard(&b, cat, item)
 			}
-			b.WriteString(":::::\n\n")
+			b.WriteString("::::::\n\n")
 		}
 	}
 	return b.String()
@@ -35,23 +35,25 @@ func buildMarkdown(categories []Category) string {
 // writeCard emits a single card div: a colored category bar, an optional
 // background watermark, and the item body.
 func writeCard(b *strings.Builder, cat Category, item Item) {
-	fmt.Fprintf(b, ":::: {.card .card--%s}\n\n", cssName(cat.Name))
+	fmt.Fprintf(b, "::::: {.card .card--%s}\n\n", cssName(cat.Name))
 
-	fmt.Fprintf(b, "::: {.card-bar}\n%s\n:::\n\n", barLabel(item))
+	fmt.Fprintf(b, ":::: {.card-bar}\n%s\n::::\n\n", barLabel(item))
 
+	b.WriteString(":::: {.card-body}\n\n")
+
+	// print background inside body so it is clipped to the card's content box, not the full page
 	if item.ImagePath != "" {
-		fmt.Fprintf(b, "::: {.card-watermark style=\"background-image: url('%s')\"}\n:::\n\n", fileURL(item.ImagePath))
+		fmt.Fprintf(b, ":::: {.card-watermark style=\"background-image: url('%s')\"}\n::::\n\n", fileURL(item.ImagePath))
 	}
 
-	b.WriteString("::: {.card-body}\n\n")
 	fmt.Fprintf(b, "# %s\n\n", item.Title)
 	if body := strings.TrimSpace(item.BodyMarkdown); body != "" {
 		b.WriteString(body)
 		b.WriteString("\n\n")
 	}
-	b.WriteString(":::\n\n")
+	b.WriteString("::::\n\n") // .card-body
 
-	b.WriteString("::::\n\n")
+	b.WriteString(":::::\n\n") // .card
 }
 
 // barLabel is the text shown in the card's colored top bar.
