@@ -1,0 +1,7 @@
+name: Text Single Item Example
+size: 123
+multiline: This entry can span
+
+over multiple
+
+lines until a new line is reached that starts with `<key>: ...`

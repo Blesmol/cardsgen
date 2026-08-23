@@ -1,0 +1,8 @@
+name: Yaml Single Item Example
+size: 123
+multiline: |
+  This entry can span
+
+  over multiple
+
+  lines using the Yaml literal block scalar.

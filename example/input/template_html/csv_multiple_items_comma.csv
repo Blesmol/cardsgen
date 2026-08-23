@@ -1,0 +1,3 @@
+name,size,multiline
+CSV Multiple Item Example 1,123,"This entry can span over multiple\n\nlines if you add line breaks manually."
+CSV Multiple Item Example 2,456,"This entry can span over multiple\n\nlines if you add line breaks manually."
