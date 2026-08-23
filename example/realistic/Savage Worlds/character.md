@@ -10,14 +10,11 @@
 
 ## Skills
 
-| Skill        | Die |
-| :----------- | :-- |
-| Athletics    |  d8 |
-| Fighting     |  d6 |
-| Notice       |  d8 |
-| Shooting     |  d8 |
-| Stealth      |  d8 |
-| Survival     |  d6 |
+| Skill        | Die  |     | Skill        | Die  |
+| :----------- | :--: | --- | :----------- | :--: |
+| Athletics    |  d8  |     | Shooting     |  d8  |
+| Fighting     |  d6  |     | Stealth      |  d8  |
+| Notice       |  d8  |     | Survival     |  d6  |
 
 ## Derived Stats
 
