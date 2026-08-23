@@ -26,7 +26,7 @@ func run() error {
 	grid := flag.String("grid", "", "global grid override as COLUMNSxROWS, e.g. 2x3")
 	margin := flag.Float64("margin", -1, "page margin override in millimetres")
 	gap := flag.Float64("gap", -1, "gap between cards override in millimetres")
-	doPandoc := flag.Bool("pandoc", false, "run pandoc to produce the PDF")
+	doPandoc := flag.Bool("pandoc", true, "run pandoc to produce the PDF")
 	doHTML := flag.Bool("html", false, "also produce a standalone HTML file for debugging")
 	flag.Parse()
 
