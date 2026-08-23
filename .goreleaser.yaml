@@ -35,7 +35,9 @@ archives:
       - goos: windows
         formats:
           - zip
-    extra_files:
+    files:
+      - LICENSE
+      - README.md
       - defaults.css
       - example/**/*
 
