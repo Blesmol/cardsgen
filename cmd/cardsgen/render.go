@@ -37,7 +37,7 @@ func buildMarkdown(categories []Category) string {
 func writeCard(b *strings.Builder, cat Category, item Item) {
 	fmt.Fprintf(b, "::::: {.card .card--%s}\n\n", cssName(cat.Name))
 
-	fmt.Fprintf(b, ":::: {.card-bar}\n%s\n::::\n\n", barLabel(item))
+	fmt.Fprintf(b, ":::: {.card-bar}\n%s\n::::\n\n", barLabel(cat, item))
 
 	b.WriteString(":::: {.card-body}\n\n")
 
@@ -57,8 +57,8 @@ func writeCard(b *strings.Builder, cat Category, item Item) {
 }
 
 // barLabel is the text shown in the card's colored top bar.
-func barLabel(item Item) string {
-	label := strings.ToUpper(item.Category)
+func barLabel(cat Category, item Item) string {
+	label := strings.ToUpper(cat.Name)
 	if item.Subcategory != "" {
 		label += " · " + item.Subcategory
 	}
