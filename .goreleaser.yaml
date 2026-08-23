@@ -39,6 +39,7 @@ archives:
       - LICENSE
       - README.md
       - defaults.css
+      - example/*
       - example/**/*
 
 checksum:
