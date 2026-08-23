@@ -18,16 +18,14 @@ func main() {
 func run() error {
 	configPath := flag.String("config", "", "path to the TOML config file (default: <dir>/cardsgen.cfg)")
 	output := flag.String("output", "", "output PDF path (default: <dir>/cards.pdf)")
-	mdOut := flag.String("md-out", "", "path for the accumulated markdown (default: <dir>/cards.md)")
-	cssOut := flag.String("css-out", "", "path for the generated stylesheet (default: <dir>/cards.css)")
 	cssTemplate := flag.String("css-template", "", "path to the base CSS template (default: <exe-dir>/defaults.css)")
-	htmlOut := flag.String("html-out", "", "path for the debug HTML (default: <dir>/cards.html)")
 	paper := flag.String("paper", "", "paper size override: a4 or letter")
 	grid := flag.String("grid", "", "global grid override as COLUMNSxROWS, e.g. 2x3")
 	margin := flag.Float64("margin", -1, "page margin override in millimetres")
 	gap := flag.Float64("gap", -1, "gap between cards override in millimetres")
 	doPandoc := flag.Bool("pandoc", true, "run pandoc to produce the PDF")
-	doHTML := flag.Bool("html", false, "also produce a standalone HTML file for debugging")
+	doHTML := flag.Bool("html", false, "also produce a standalone HTML file (generated.html)")
+	keepMD := flag.Bool("md", false, "keep the generated markdown and CSS files (generated.md, generated.css)")
 	flag.Parse()
 
 	args := flag.Args()
@@ -46,15 +44,11 @@ func run() error {
 	if *output == "" {
 		*output = filepath.Join(absDir, "cards.pdf")
 	}
-	if *mdOut == "" {
-		*mdOut = filepath.Join(absDir, "cards.md")
-	}
-	if *cssOut == "" {
-		*cssOut = filepath.Join(absDir, "cards.css")
-	}
-	if *htmlOut == "" {
-		*htmlOut = filepath.Join(absDir, "cards.html")
-	}
+
+	mdOut := filepath.Join(absDir, "generated.md")
+	cssOut := filepath.Join(absDir, "generated.css")
+	htmlOut := filepath.Join(absDir, "generated.html")
+
 	if *cssTemplate == "" {
 		exeDir, err := executableDir()
 		if err != nil {
@@ -87,8 +81,8 @@ func run() error {
 	}
 
 	markdown := buildMarkdown(categories)
-	if err := os.WriteFile(*mdOut, []byte(markdown), 0o644); err != nil {
-		return fmt.Errorf("writing markdown %q: %w", *mdOut, err)
+	if err := os.WriteFile(mdOut, []byte(markdown), 0o644); err != nil {
+		return fmt.Errorf("writing markdown %q: %w", mdOut, err)
 	}
 
 	baseCSS, err := loadCSSTemplate(*cssTemplate)
@@ -100,18 +94,17 @@ func run() error {
 		return err
 	}
 	css := buildCSS(cfg, paperSize, categories, baseCSS, overrideCSS)
-	if err := os.WriteFile(*cssOut, []byte(css), 0o644); err != nil {
-		return fmt.Errorf("writing stylesheet %q: %w", *cssOut, err)
+	if err := os.WriteFile(cssOut, []byte(css), 0o644); err != nil {
+		return fmt.Errorf("writing stylesheet %q: %w", cssOut, err)
 	}
 
-	fmt.Printf("scanned %d categories, %d cards; wrote %s and %s\n",
-		len(categories), countItems(categories), *mdOut, *cssOut)
+	fmt.Printf("scanned %d categories, %d cards\n", len(categories), countItems(categories))
 
 	if *doPandoc {
 		if err := checkTools(true); err != nil {
 			return err
 		}
-		if err := runPandocPDF(*mdOut, *cssOut, *output); err != nil {
+		if err := runPandocPDF(mdOut, cssOut, *output); err != nil {
 			return err
 		}
 		fmt.Printf("wrote %s\n", *output)
@@ -121,10 +114,17 @@ func run() error {
 		if err := checkTools(false); err != nil {
 			return err
 		}
-		if err := runPandocHTML(*mdOut, *cssOut, *htmlOut); err != nil {
+		if err := runPandocHTML(mdOut, cssOut, htmlOut); err != nil {
 			return err
 		}
-		fmt.Printf("wrote %s\n", *htmlOut)
+		fmt.Printf("wrote %s\n", htmlOut)
+	}
+
+	if !*keepMD {
+		os.Remove(mdOut)
+		os.Remove(cssOut)
+	} else {
+		fmt.Printf("kept %s and %s\n", mdOut, cssOut)
 	}
 
 	return nil

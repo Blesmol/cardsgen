@@ -35,8 +35,7 @@ go.work.sum
 
 /cardsgen
 
-example/cards.css
-example/cards.md
+example/generated.*
 example/cards.pdf
 
 /private/
