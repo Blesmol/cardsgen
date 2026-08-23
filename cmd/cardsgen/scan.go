@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 // imageExtensions are the sibling image types recognised for a card, in
@@ -42,11 +44,12 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 	byName := map[string][]Item{}
 	templates := map[string]templateEntry{} // absolute directory path → template
 
-	type pendingTxt struct {
+	type pendingFile struct {
 		path  string
 		parts []string
 	}
-	var txtPending []pendingTxt
+	var txtPending []pendingFile
+	var yamlPending []pendingFile
 
 	// Walk the directory tree, classifying each file by extension.
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
@@ -104,7 +107,10 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 			byName[item.Category] = append(byName[item.Category], item)
 
 		case ext == ".txt":
-			txtPending = append(txtPending, pendingTxt{path, parts})
+			txtPending = append(txtPending, pendingFile{path, parts})
+
+		case ext == ".yml" || ext == ".yaml":
+			yamlPending = append(yamlPending, pendingFile{path, parts})
 		}
 		return nil
 	})
@@ -125,6 +131,26 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 			return nil, fmt.Errorf("%s: %w", filepath.Join(p.parts...), err)
 		}
 		byName[item.Category] = append(byName[item.Category], item)
+	}
+
+	// Process YAML files similarly; a single file may expand to multiple items.
+	for _, p := range yamlPending {
+		tmpl, ok := resolveTemplate(root, filepath.Dir(p.path), templates)
+		if !ok {
+			return nil, fmt.Errorf("%s: no template found in directory or any parent up to %s",
+				filepath.Join(p.parts...), root)
+		}
+		kvMaps, err := parseYAMLItems(p.path)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", filepath.Join(p.parts...), err)
+		}
+		for _, kv := range kvMaps {
+			item, err := kvToItem(p.path, p.parts, tmpl, kv)
+			if err != nil {
+				return nil, fmt.Errorf("%s: %w", filepath.Join(p.parts...), err)
+			}
+			byName[item.Category] = append(byName[item.Category], item)
+		}
 	}
 
 	// Collect and sort category names for deterministic output order.
@@ -219,7 +245,11 @@ func parseTxtItem(path string, parts []string, tmpl templateEntry) (Item, error)
 	if err != nil {
 		return Item{}, err
 	}
+	return kvToItem(path, parts, tmpl, kv)
+}
 
+// kvToItem applies a template to a key-value map and constructs an Item.
+func kvToItem(path string, parts []string, tmpl templateEntry, kv map[string]string) (Item, error) {
 	rendered := applyTemplate(tmpl.content, kv, filepath.Join(parts...))
 
 	var title, body string
@@ -360,4 +390,50 @@ func findSiblingImage(mdPath string) string {
 		}
 	}
 	return ""
+}
+
+// parseYAMLItems reads a YAML file and returns one key-value map per card.
+// A top-level YAML list produces one map per element; a top-level map produces
+// a single-element slice.
+func parseYAMLItems(path string) ([]map[string]string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var top interface{}
+	if err := yaml.Unmarshal([]byte(stripBOM(string(data))), &top); err != nil {
+		return nil, fmt.Errorf("failed to parse YAML: %w", err)
+	}
+
+	switch v := top.(type) {
+	case []interface{}:
+		result := make([]map[string]string, 0, len(v))
+		for i, elem := range v {
+			m, ok := elem.(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("list element %d is not a mapping", i)
+			}
+			result = append(result, yamlMapToStrings(m))
+		}
+		return result, nil
+	case map[string]interface{}:
+		return []map[string]string{yamlMapToStrings(v)}, nil
+	default:
+		return nil, fmt.Errorf("unexpected top-level YAML structure (want mapping or list)")
+	}
+}
+
+// yamlMapToStrings converts a map[string]interface{} to map[string]string by
+// formatting each value with fmt.Sprintf. Nil values become empty strings.
+func yamlMapToStrings(m map[string]interface{}) map[string]string {
+	out := make(map[string]string, len(m))
+	for k, v := range m {
+		if v == nil {
+			out[k] = ""
+		} else {
+			out[k] = fmt.Sprintf("%v", v)
+		}
+	}
+	return out
 }
