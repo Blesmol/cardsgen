@@ -8,7 +8,10 @@ type Config struct {
 	MarginMM float64 `toml:"margin_mm"` // page margin in millimetres
 	GapMM    float64 `toml:"gap_mm"`    // gap between cards in millimetres
 
-	Colors map[string]string `toml:"colors"` // category name -> CSS color
+	CategoryColors map[string]string `toml:"category_colors"` // category name -> CSS color
+
+	// CategoryNames overrides the display name shown on cards per category.
+	CategoryNames map[string]string `toml:"category_names"`
 
 	// CategoryGrid overrides the grid per category (config-only, e.g. "3x4").
 	CategoryGrid map[string]string `toml:"category_grid"`

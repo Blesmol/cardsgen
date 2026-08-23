@@ -150,7 +150,7 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 			return nil, err
 		}
 		categories = append(categories, Category{
-			Name:  name,
+			Name:  nameForCategory(cfg, name),
 			Color: colorForCategory(cfg, name),
 			Grid:  grid,
 			Items: items,

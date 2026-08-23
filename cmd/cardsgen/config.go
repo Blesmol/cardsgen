@@ -17,8 +17,9 @@ func defaultConfig() Config {
 		Grid:         "2x3",
 		MarginMM:     10,
 		GapMM:        5,
-		Colors:       map[string]string{},
-		CategoryGrid: map[string]string{},
+		CategoryColors: map[string]string{},
+		CategoryNames:  map[string]string{},
+		CategoryGrid:   map[string]string{},
 	}
 }
 
@@ -59,7 +60,7 @@ func loadConfig(path string) (Config, error) {
 }
 
 // mergeDefaults fills unset scalar fields from def and merges map entries so a
-// partial [colors] table keeps the built-in colors for untouched categories.
+// partial [category_colors] table keeps the built-in colors for untouched categories.
 func mergeDefaults(cfg, def Config) Config {
 	if strings.TrimSpace(cfg.Paper) == "" {
 		cfg.Paper = def.Paper
@@ -73,8 +74,11 @@ func mergeDefaults(cfg, def Config) Config {
 	if cfg.GapMM == 0 {
 		cfg.GapMM = def.GapMM
 	}
-	if cfg.Colors == nil {
-		cfg.Colors = map[string]string{}
+	if cfg.CategoryColors == nil {
+		cfg.CategoryColors = map[string]string{}
+	}
+	if cfg.CategoryNames == nil {
+		cfg.CategoryNames = map[string]string{}
 	}
 	if cfg.CategoryGrid == nil {
 		cfg.CategoryGrid = map[string]string{}
@@ -124,10 +128,19 @@ func gridForCategory(cfg Config, category string, global Grid) (Grid, error) {
 // colorForCategory returns the configured color for a category, or a
 // deterministic color derived from the category name via FNV-1a hashing.
 func colorForCategory(cfg Config, category string) string {
-	if c, ok := cfg.Colors[category]; ok && strings.TrimSpace(c) != "" {
+	if c, ok := cfg.CategoryColors[category]; ok && strings.TrimSpace(c) != "" {
 		return c
 	}
 	return categoryColorFromName(category)
+}
+
+// nameForCategory returns the configured display name for a category, or the
+// directory name unchanged when no override is set.
+func nameForCategory(cfg Config, category string) string {
+	if n, ok := cfg.CategoryNames[category]; ok && strings.TrimSpace(n) != "" {
+		return n
+	}
+	return category
 }
 
 // categoryColorFromName derives a stable color from a category name by hashing
@@ -159,9 +172,16 @@ const configTemplate = `# ttrpgcards configuration.
 # Per-category colors (used for the card's top bar). Keys are top-level
 # directory names. Each unlisted category automatically gets a color derived
 # from its name, so this section is only needed to override specific categories.
-# [colors]
+# [category_colors]
 # weapons = "#8c2f2f"
 # spells  = "#7b2f8c"
+
+# Per-category display name overrides. Keys are top-level directory names;
+# values are the label shown on each card. Useful when directory names must
+# be filesystem-safe but you want a nicer label (e.g. spaces, mixed case).
+# [category_names]
+# weapons         = "Weapons & Armour"
+# savage_worlds   = "Savage Worlds"
 
 # Per-category grid overrides (config-only, not available as a CLI flag).
 # Each listed category uses its own grid; others use the global grid above.
