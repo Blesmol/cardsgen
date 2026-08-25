@@ -142,6 +142,17 @@ body {
 .card-body .borderless > table th,
 .card-body .borderless > table td { border: none; }
 
+/* Side-by-side columns — use ::: {.columns} fenced div wrapper */
+.card-body .columns { display: flex; gap: 2mm; }
+.card-body .columns > * { flex: 1 1 0; min-width: 0; }
+/* Proportional widths via nested fenced divs: :::: {.col-2} gives 2× space */
+.card-body .col-1 { flex-grow: 1; }
+.card-body .col-2 { flex-grow: 2; }
+.card-body .col-3 { flex-grow: 3; }
+.card-body .col-4 { flex-grow: 4; }
+/* Tables inside columns fill their container */
+.card-body .columns table { width: 100%; }
+
 /* Task list checkboxes */
 .card-body input[type="checkbox"] {
   appearance: none;
