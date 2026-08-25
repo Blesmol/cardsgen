@@ -5,7 +5,7 @@ This text here still uses the standard layout.
 ---
 
 ::: {.description}
-Everything in this text block uses the `.description` layout from file `example/cardsgen.css`.
+Everything in this text block uses the `.description` layout from file `examples/basics/cardsgen.css`.
 :::
 
 ---
