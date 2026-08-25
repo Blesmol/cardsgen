@@ -21,6 +21,7 @@ func stripBOM(s string) string { return strings.TrimPrefix(s, "\xEF\xBB\xBF") }
 
 var kvKeyLine = regexp.MustCompile(`^([^\s:]+):\s*(.*)$`)
 var templatePlaceholder = regexp.MustCompile(`\{([^}]+)\}`)
+var includeDirective = regexp.MustCompile(`\{include:([^}]+)\}`)
 var blankLines = regexp.MustCompile(`\n{2,}`)
 var mdInlineImage = regexp.MustCompile(`!\[([^\]]*)\]\(([^)]+)\)`)
 var htmlH1 = regexp.MustCompile(`(?i)<h1[^>]*>(.*?)</h1>`)
@@ -36,6 +37,7 @@ const (
 type templateEntry struct {
 	content string
 	kind    templateKind
+	dir     string // absolute path of the directory containing the template file
 }
 
 // scanCategories walks root and groups items (markdown and txt) by their
@@ -60,9 +62,15 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 		}
 		// Skip hidden directories; descend into all others.
 		if d.IsDir() {
-			if path != root && strings.HasPrefix(d.Name(), ".") {
+			if path != root && (strings.HasPrefix(d.Name(), ".") || strings.HasPrefix(d.Name(), "_")) {
 				return filepath.SkipDir
 			}
+			return nil
+		}
+		// Skip underscore-prefixed files (except _template.md/_template.html).
+		if strings.HasPrefix(d.Name(), "_") &&
+			!strings.EqualFold(d.Name(), "_template.md") &&
+			!strings.EqualFold(d.Name(), "_template.html") {
 			return nil
 		}
 
@@ -81,7 +89,7 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 
 		// Dispatch by file type: store templates, parse markdown items, defer txt files.
 		switch {
-		case ext == ".md" && strings.EqualFold(d.Name(), "template.md"):
+		case ext == ".md" && strings.EqualFold(d.Name(), "_template.md"):
 			if _, exists := templates[filepath.Dir(path)]; exists {
 				return fmt.Errorf("%s: directory already contains a template file", rel)
 			}
@@ -89,9 +97,9 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 			if err != nil {
 				return fmt.Errorf("%s: %w", rel, err)
 			}
-			templates[filepath.Dir(path)] = templateEntry{content: stripBOM(string(data)), kind: templateMarkdown}
+			templates[filepath.Dir(path)] = templateEntry{content: stripBOM(string(data)), kind: templateMarkdown, dir: filepath.Dir(path)}
 
-		case ext == ".html" && strings.EqualFold(d.Name(), "template.html"):
+		case ext == ".html" && strings.EqualFold(d.Name(), "_template.html"):
 			if _, exists := templates[filepath.Dir(path)]; exists {
 				return fmt.Errorf("%s: directory already contains a template file", rel)
 			}
@@ -99,7 +107,7 @@ func scanCategories(root string, cfg Config, global Grid) ([]Category, error) {
 			if err != nil {
 				return fmt.Errorf("%s: %w", rel, err)
 			}
-			templates[filepath.Dir(path)] = templateEntry{content: stripBOM(string(data)), kind: templateHTML}
+			templates[filepath.Dir(path)] = templateEntry{content: stripBOM(string(data)), kind: templateHTML, dir: filepath.Dir(path)}
 
 		case ext == ".md" || ext == ".html":
 			item, err := parseItem(path, parts)
@@ -275,7 +283,10 @@ func parseTxtItem(path string, parts []string, tmpl templateEntry) (Item, error)
 
 // kvToItem applies a template to a key-value map and constructs an Item.
 func kvToItem(path string, parts []string, tmpl templateEntry, kv map[string]string) (Item, error) {
-	rendered := applyTemplate(tmpl.content, kv, filepath.Join(parts...))
+	rendered, err := applyTemplate(tmpl.content, tmpl.dir, kv, filepath.Join(parts...))
+	if err != nil {
+		return Item{}, err
+	}
 
 	var title, body string
 	if tmpl.kind == templateHTML {
@@ -339,13 +350,45 @@ func parseKVFile(path string) (map[string]string, error) {
 	return kv, nil
 }
 
+// resolveIncludes expands {include:path} directives in content by reading the
+// referenced file relative to dir. Included files are processed recursively so
+// their own {include:...} directives (resolved relative to their own directory)
+// are expanded as well.
+func resolveIncludes(content, dir string) (string, error) {
+	var firstErr error
+	result := includeDirective.ReplaceAllStringFunc(content, func(match string) string {
+		if firstErr != nil {
+			return ""
+		}
+		relPath := match[len("{include:") : len(match)-1]
+		absPath := filepath.Join(dir, filepath.FromSlash(relPath))
+		data, err := os.ReadFile(absPath)
+		if err != nil {
+			firstErr = fmt.Errorf("include %s: %w", relPath, err)
+			return ""
+		}
+		expanded, err := resolveIncludes(stripBOM(string(data)), filepath.Dir(absPath))
+		if err != nil {
+			firstErr = err
+			return ""
+		}
+		return expanded
+	})
+	return result, firstErr
+}
+
 // applyTemplate replaces {key} placeholders in tmpl with values from kv.
+// {include:path} directives are expanded first, relative to tmplDir.
 // Missing keys produce a warning on stderr and are replaced with an empty string.
 // Blank lines within a value are converted to pandoc hard line breaks (a
 // backslash at the end of a line) so that multi-line values remain compatible
 // with inline markdown formatting such as *{description}*.
-func applyTemplate(tmpl string, kv map[string]string, srcPath string) string {
-	return templatePlaceholder.ReplaceAllStringFunc(tmpl, func(match string) string {
+func applyTemplate(tmpl, tmplDir string, kv map[string]string, srcPath string) (string, error) {
+	expanded, err := resolveIncludes(tmpl, tmplDir)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", srcPath, err)
+	}
+	result := templatePlaceholder.ReplaceAllStringFunc(expanded, func(match string) string {
 		key := match[1 : len(match)-1]
 		if val, ok := kv[key]; ok {
 			return blankLines.ReplaceAllString(val, "\\\n")
@@ -353,6 +396,7 @@ func applyTemplate(tmpl string, kv map[string]string, srcPath string) string {
 		fmt.Fprintf(os.Stderr, "warning: %s: no value for placeholder {%s}\n", srcPath, key)
 		return ""
 	})
+	return result, nil
 }
 
 // splitMarkdownTitle extracts the first level-1 heading as the title and returns the
