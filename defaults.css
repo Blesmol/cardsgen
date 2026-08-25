@@ -136,6 +136,12 @@ body {
 .card-body .center > table th, .card-body .center > table td,
 .card-body .right  > table th, .card-body .right  > table td { text-align: left; }
 
+/* Remove all cell borders — use as <table class="borderless"> or ::: {.borderless} */
+.card-body table.borderless th,
+.card-body table.borderless td,
+.card-body .borderless > table th,
+.card-body .borderless > table td { border: none; }
+
 /* Task list checkboxes */
 .card-body input[type="checkbox"] {
   appearance: none;
