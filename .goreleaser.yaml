@@ -39,8 +39,8 @@ archives:
       - LICENSE
       - README.md
       - defaults.css
-      - example/*
-      - example/**/*
+      - examples/*
+      - examples/**/*
 
 checksum:
   name_template: checksums.txt
