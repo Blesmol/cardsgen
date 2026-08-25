@@ -5,9 +5,9 @@ GO ?= go
 GOFLAGS ?=
 LDFLAGS ?= -s -w
 
-.PHONY: all build run test vet fmt tidy clean install example
+.PHONY: all build run test vet fmt tidy clean install examples
 
-all: build example
+all: build examples
 
 build:
 	$(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $(BINARY) $(PKG)
@@ -34,5 +34,8 @@ clean:
 	rm -f $(BINARY)
 	$(GO) clean
 
-example: $(BINARY)
-	./$(BINARY) example --md --html
+examples: $(BINARY)
+	@for dir in examples/*/; do \
+		[ -d "$$dir" ] || continue; \
+		./$(BINARY) "$$dir" --md --html ; \
+	done
