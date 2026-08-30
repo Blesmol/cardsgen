@@ -202,3 +202,69 @@ func TestParseCSVItems_emptyFile(t *testing.T) {
 	}
 }
 
+func TestResolveIncludes_noIncludes(t *testing.T) {
+	content := "plain content, no directives\n"
+	got, err := resolveIncludes(content, filepath.Join("testdata", "includes"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != content {
+		t.Errorf("got %q, want %q", got, content)
+	}
+}
+
+func TestResolveIncludes_singleInclude(t *testing.T) {
+	dir := filepath.Join("testdata", "includes")
+	data, err := os.ReadFile(filepath.Join(dir, "simple_include.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := resolveIncludes(string(data), dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "before\nincluded content\n\nafter\n"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestResolveIncludes_multipleIncludes(t *testing.T) {
+	dir := filepath.Join("testdata", "includes")
+	data, err := os.ReadFile(filepath.Join(dir, "two_includes.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := resolveIncludes(string(data), dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "included content\n\nmiddle\nincluded content\n\n"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestResolveIncludes_nestedIncludes(t *testing.T) {
+	dir := filepath.Join("testdata", "includes", "deep")
+	data, err := os.ReadFile(filepath.Join(dir, "root.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := resolveIncludes(string(data), dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "root\nL1\nL2\nL3 content\n\n/L2\n\n/L1\n\nend\n"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestResolveIncludes_missingFile(t *testing.T) {
+	_, err := resolveIncludes("{include:does_not_exist.md}", filepath.Join("testdata", "includes"))
+	if err == nil {
+		t.Error("expected error for missing include file")
+	}
+}
+
