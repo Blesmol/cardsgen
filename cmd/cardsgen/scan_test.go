@@ -418,3 +418,15 @@ func TestApplyTemplate_conditionals(t *testing.T) {
 	})
 }
 
+func TestApplyTemplate_unknownPlaceholderPassthrough(t *testing.T) {
+	tmpl := "{known} ::: {.borderless}\n{unknown}\n:::"
+	got, err := applyTemplate(tmpl, t.TempDir(), map[string]string{"known": "X"}, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "X ::: {.borderless}\n{unknown}\n:::"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+

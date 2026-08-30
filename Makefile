@@ -39,3 +39,9 @@ examples: $(BINARY)
 		[ -d "$$dir" ] || continue; \
 		./$(BINARY) "$$dir" --md --html ; \
 	done
+
+priv: $(BINARY)
+	@for dir in private/*/; do \
+		[ -d "$$dir" ] || continue; \
+		./$(BINARY) "$$dir" ; \
+	done

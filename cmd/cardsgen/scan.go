@@ -423,7 +423,8 @@ func resolveConditionals(content string, kv map[string]string) string {
 
 // applyTemplate replaces {key} placeholders in tmpl with values from kv.
 // {include:path} directives are expanded first, relative to tmplDir.
-// Missing keys produce a warning on stderr and are replaced with an empty string.
+// Unknown tokens (not in kv) are left as-is so pandoc attributes such as
+// {.classname} or {#id} pass through unchanged.
 // Blank lines within a value are converted to pandoc hard line breaks (a
 // backslash at the end of a line) so that multi-line values remain compatible
 // with inline markdown formatting such as *{description}*.
@@ -438,8 +439,7 @@ func applyTemplate(tmpl, tmplDir string, kv map[string]string, srcPath string) (
 		if val, ok := kv[key]; ok {
 			return blankLines.ReplaceAllString(val, "\\\n")
 		}
-		fmt.Fprintf(os.Stderr, "warning: %s: no value for placeholder {%s}\n", srcPath, key)
-		return ""
+		return match
 	})
 	return result, nil
 }
