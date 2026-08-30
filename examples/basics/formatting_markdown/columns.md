@@ -32,3 +32,33 @@ At vero eos et accusam et justo duo dolores et ea rebum.
 
 <!-- the following line ends the .columns block -->
 :::
+
+---
+
+````markdown
+This is some standard text without further formatting.
+It uses the whole line.
+But the following text will consist of 2/3 text on the left side vs 1/3 table on the right side.
+
+---
+
+::: {.columns}
+
+<!-- The following block should be 2 elements wide -->
+::: {.col-2}
+Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor
+invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.
+At vero eos et accusam et justo duo dolores et ea rebum.
+:::
+
+<!-- And this one only is only a single element wide -->
+::: {.col-1}
+| A     | B     |
+| :---: | :---: |
+| 7     | 5     |
+| -123  | 14    |
+:::
+
+<!-- the following line ends the .columns block -->
+:::
+````
