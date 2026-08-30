@@ -34,13 +34,13 @@ clean:
 	rm -f $(BINARY)
 	$(GO) clean
 
-examples: $(BINARY)
+examples: build
 	@for dir in examples/*/; do \
 		[ -d "$$dir" ] || continue; \
 		./$(BINARY) "$$dir" --md --html ; \
 	done
 
-priv: $(BINARY)
+priv: build
 	@for dir in private/*/; do \
 		[ -d "$$dir" ] || continue; \
 		./$(BINARY) "$$dir" ; \
