@@ -11,54 +11,44 @@ But the following text will consist of 2/3 text on the left side vs 1/3 table on
     spreads over the first two columns and the last block over the 3rd column.
 -->
 
----
-
 ::: {.columns}
-
-<!-- The following block should be 2 elements wide -->
+<!-- The following block is 2 elements wide -->
 ::: {.col-2}
-Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor
-invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.
-At vero eos et accusam et justo duo dolores et ea rebum.
+This text uses the first 2/3 of the whole width.
+The last 1/3 is used by the table.
 :::
 
-<!-- And this one only is only a single element wide -->
+<!-- This block is only 1 element wide -->
 ::: {.col-1}
 | A     | B     |
 | :---: | :---: |
 | 7     | 5     |
-| -123  | 14    |
 :::
-
-<!-- the following line ends the .columns block -->
+<!-- the following line ends the {.columns} -->
 :::
 
 ---
 
 ````markdown
-This is some standard text without further formatting.
-It uses the whole line.
-But the following text will consist of 2/3 text on the left side vs 1/3 table on the right side.
-
----
+This is some standard text without further
+formatting. It uses the whole line.
+But the following text will consist of
+2/3 text on the left side vs 1/3 table on
+the right side.
 
 ::: {.columns}
-
-<!-- The following block should be 2 elements wide -->
+<!-- The following block is 2 elements wide -->
 ::: {.col-2}
-Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor
-invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.
-At vero eos et accusam et justo duo dolores et ea rebum.
+This text uses the first 2/3 of the whole width.
+The last 1/3 is used by the table.
 :::
-
-<!-- And this one only is only a single element wide -->
+<!--  This block is only 1 element wide -->
 ::: {.col-1}
 | A     | B     |
 | :---: | :---: |
 | 7     | 5     |
 | -123  | 14    |
 :::
-
-<!-- the following line ends the .columns block -->
+<!-- The following line ends the {.columns} -->
 :::
 ````
