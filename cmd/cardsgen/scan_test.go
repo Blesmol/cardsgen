@@ -268,3 +268,153 @@ func TestResolveIncludes_missingFile(t *testing.T) {
 	}
 }
 
+func TestEvalCondition(t *testing.T) {
+	tests := []struct {
+		name string
+		cond string
+		kv   map[string]string
+		want bool
+	}{
+		{"key present", "x", map[string]string{"x": "1"}, true},
+		{"key absent", "x", map[string]string{}, false},
+		{"key empty string", "x", map[string]string{"x": ""}, false},
+		{"equality match", "level=adv", map[string]string{"level": "adv"}, true},
+		{"equality mismatch", "level=adv", map[string]string{"level": "beg"}, false},
+		{"equality absent key", "level=adv", map[string]string{}, false},
+		{"equality with equals in value", "url=https://a.com", map[string]string{"url": "https://a.com"}, true},
+		{"equality value mismatch with equals", "url=https://a.com", map[string]string{"url": "https://b.com"}, false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := evalCondition(tc.cond, tc.kv)
+			if got != tc.want {
+				t.Errorf("evalCondition(%q, %v) = %v, want %v", tc.cond, tc.kv, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestResolveConditionals(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		kv      map[string]string
+		want    string
+	}{
+		{
+			name:    "no directives",
+			content: "plain text",
+			kv:      map[string]string{},
+			want:    "plain text",
+		},
+		{
+			name:    "key present no else",
+			content: "{if:x}yes{endif}",
+			kv:      map[string]string{"x": "1"},
+			want:    "yes",
+		},
+		{
+			name:    "key absent no else",
+			content: "{if:x}yes{endif}",
+			kv:      map[string]string{},
+			want:    "",
+		},
+		{
+			name:    "key empty no else",
+			content: "{if:x}yes{endif}",
+			kv:      map[string]string{"x": ""},
+			want:    "",
+		},
+		{
+			name:    "key present with else",
+			content: "{if:x}yes{else}no{endif}",
+			kv:      map[string]string{"x": "1"},
+			want:    "yes",
+		},
+		{
+			name:    "key absent with else",
+			content: "{if:x}yes{else}no{endif}",
+			kv:      map[string]string{},
+			want:    "no",
+		},
+		{
+			name:    "equality match",
+			content: "{if:level=adv}Expert{endif}",
+			kv:      map[string]string{"level": "adv"},
+			want:    "Expert",
+		},
+		{
+			name:    "equality mismatch with else",
+			content: "{if:level=adv}Expert{else}Basic{endif}",
+			kv:      map[string]string{"level": "beg"},
+			want:    "Basic",
+		},
+		{
+			name:    "equality absent key with else",
+			content: "{if:level=adv}Expert{else}Basic{endif}",
+			kv:      map[string]string{},
+			want:    "Basic",
+		},
+		{
+			name:    "multiple sequential blocks",
+			content: "{if:a}A{endif} {if:b}B{endif}",
+			kv:      map[string]string{"a": "1"},
+			want:    "A ",
+		},
+		{
+			name:    "no endif passthrough",
+			content: "{if:x}yes",
+			kv:      map[string]string{"x": "1"},
+			want:    "{if:x}yes",
+		},
+		{
+			name:    "multiline then block",
+			content: "{if:x}\nline1\nline2\n{endif}",
+			kv:      map[string]string{"x": "1"},
+			want:    "\nline1\nline2\n",
+		},
+		{
+			name:    "multiline else block",
+			content: "{if:x}\nline1\n{else}\nline2\n{endif}",
+			kv:      map[string]string{},
+			want:    "\nline2\n",
+		},
+		{
+			name:    "surrounding text preserved",
+			content: "before\n{if:x}middle\n{endif}after",
+			kv:      map[string]string{"x": "yes"},
+			want:    "before\nmiddle\nafter",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := resolveConditionals(tc.content, tc.kv)
+			if got != tc.want {
+				t.Errorf("resolveConditionals(%q) = %q, want %q", tc.content, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestApplyTemplate_conditionals(t *testing.T) {
+	tmpl := "{if:name}Hello {name}!{else}Hello stranger!{endif}"
+	t.Run("key present", func(t *testing.T) {
+		got, err := applyTemplate(tmpl, t.TempDir(), map[string]string{"name": "World"}, "test")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != "Hello World!" {
+			t.Errorf("got %q, want %q", got, "Hello World!")
+		}
+	})
+	t.Run("key absent", func(t *testing.T) {
+		got, err := applyTemplate(tmpl, t.TempDir(), map[string]string{}, "test")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != "Hello stranger!" {
+			t.Errorf("got %q, want %q", got, "Hello stranger!")
+		}
+	})
+}
+

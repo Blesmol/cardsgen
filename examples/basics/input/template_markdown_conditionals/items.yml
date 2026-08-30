@@ -1,0 +1,11 @@
+- name: Card With Note and Hard Difficulty
+  description: This card has an optional `note` field and `difficulty=hard`. Both conditional blocks show their then-branch.
+  note: This detail only appears when the note key is present.
+  difficulty: hard
+
+- name: Card Without Note, Normal Difficulty
+  description: This card has no `note` field and no `difficulty` key. The note block is skipped; the difficulty else-branch is shown.
+
+- name: Card Without Note, Hard Difficulty
+  description: This card has `difficulty=hard` but no `note`. The note block is skipped; the hard-difficulty branch is shown.
+  difficulty: hard

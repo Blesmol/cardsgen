@@ -22,6 +22,7 @@ func stripBOM(s string) string { return strings.TrimPrefix(s, "\xEF\xBB\xBF") }
 var kvKeyLine = regexp.MustCompile(`^([^\s:]+):\s*(.*)$`)
 var templatePlaceholder = regexp.MustCompile(`\{([^}]+)\}`)
 var includeDirective = regexp.MustCompile(`\{include:([^}]+)\}`)
+var ifDirective = regexp.MustCompile(`\{if:([^}]+)\}`)
 var blankLines = regexp.MustCompile(`\n{2,}`)
 var mdInlineImage = regexp.MustCompile(`!\[([^\]]*)\]\(([^)]+)\)`)
 var htmlH1 = regexp.MustCompile(`(?i)<h1[^>]*>(.*?)</h1>`)
@@ -377,6 +378,49 @@ func resolveIncludes(content, dir string) (string, error) {
 	return result, firstErr
 }
 
+// evalCondition evaluates a condition string against kv.
+// "key"       → true iff kv["key"] exists and is non-empty.
+// "key=value" → true iff kv["key"] == "value" (splits on first '=' only).
+func evalCondition(cond string, kv map[string]string) bool {
+	if key, want, ok := strings.Cut(cond, "="); ok {
+		return kv[key] == want
+	}
+	val, ok := kv[cond]
+	return ok && val != ""
+}
+
+// resolveConditionals evaluates {if:cond}...{else}...{endif} blocks in content,
+// keeping the then-branch or else-branch based on kv. Blocks without a matching
+// {endif} are emitted literally. No nesting is supported; a literal "{else}"
+// inside a then-block would be misinterpreted as the branch separator.
+func resolveConditionals(content string, kv map[string]string) string {
+	var b strings.Builder
+	for {
+		loc := ifDirective.FindStringIndex(content)
+		if loc == nil {
+			b.WriteString(content)
+			return b.String()
+		}
+		b.WriteString(content[:loc[0]])
+		condStr := content[loc[0]+4 : loc[1]-1] // skip "{if:" prefix and "}" suffix
+		rest := content[loc[1]:]
+		endifIdx := strings.Index(rest, "{endif}")
+		if endifIdx < 0 {
+			b.WriteString(content[loc[0]:loc[1]])
+			content = rest
+			continue
+		}
+		block := rest[:endifIdx]
+		content = rest[endifIdx+len("{endif}"):]
+		thenPart, elsePart, _ := strings.Cut(block, "{else}")
+		if evalCondition(condStr, kv) {
+			b.WriteString(thenPart)
+		} else {
+			b.WriteString(elsePart)
+		}
+	}
+}
+
 // applyTemplate replaces {key} placeholders in tmpl with values from kv.
 // {include:path} directives are expanded first, relative to tmplDir.
 // Missing keys produce a warning on stderr and are replaced with an empty string.
@@ -388,7 +432,8 @@ func applyTemplate(tmpl, tmplDir string, kv map[string]string, srcPath string) (
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", srcPath, err)
 	}
-	result := templatePlaceholder.ReplaceAllStringFunc(expanded, func(match string) string {
+	conditioned := resolveConditionals(expanded, kv)
+	result := templatePlaceholder.ReplaceAllStringFunc(conditioned, func(match string) string {
 		key := match[1 : len(match)-1]
 		if val, ok := kv[key]; ok {
 			return blankLines.ReplaceAllString(val, "\\\n")

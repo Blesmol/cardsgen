@@ -1,0 +1,5 @@
+- name: Include Example 1
+  description: The footer below comes from a shared `_footer.md` fragment. It appears identically on every card in this group.
+
+- name: Include Example 2
+  description: Same template, different data — but the included footer is still the same file on disk.
