@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -129,8 +130,8 @@ func run() error {
 	}
 
 	if !*keepMD {
-		os.Remove(mdOut)
-		os.Remove(cssOut)
+		warnRemove(mdOut, os.Stderr)
+		warnRemove(cssOut, os.Stderr)
 	} else {
 		fmt.Printf("kept %s and %s\n", mdOut, cssOut)
 	}
@@ -175,4 +176,12 @@ func countItems(categories []Category) int {
 		n += len(c.Items)
 	}
 	return n
+}
+
+// warnRemove removes path and writes a warning to w if the removal fails for
+// any reason other than the file not existing.
+func warnRemove(path string, w io.Writer) {
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		fmt.Fprintf(w, "warning: removing %s: %v\n", path, err)
+	}
 }
