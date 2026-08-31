@@ -12,11 +12,12 @@ import (
 // defaultConfig returns the built-in defaults used when no config file (or no
 // value) is provided.
 func defaultConfig() Config {
+	margin, gap := 10.0, 5.0
 	return Config{
-		Paper:        "a4",
-		Grid:         "2x3",
-		MarginMM:     10,
-		GapMM:        5,
+		Paper:          "a4",
+		Grid:           "2x3",
+		MarginMM:       &margin,
+		GapMM:          &gap,
 		CategoryColors: map[string]string{},
 		CategoryNames:  map[string]string{},
 		CategoryGrid:   map[string]string{},
@@ -68,10 +69,10 @@ func mergeDefaults(cfg, def Config) Config {
 	if strings.TrimSpace(cfg.Grid) == "" {
 		cfg.Grid = def.Grid
 	}
-	if cfg.MarginMM == 0 {
+	if cfg.MarginMM == nil {
 		cfg.MarginMM = def.MarginMM
 	}
-	if cfg.GapMM == 0 {
+	if cfg.GapMM == nil {
 		cfg.GapMM = def.GapMM
 	}
 	if cfg.CategoryColors == nil {

@@ -161,10 +161,10 @@ func applyOverrides(cfg *Config, paper, grid string, margin, gap float64) {
 		cfg.Grid = grid
 	}
 	if margin >= 0 {
-		cfg.MarginMM = margin
+		cfg.MarginMM = &margin
 	}
 	if gap >= 0 {
-		cfg.GapMM = gap
+		cfg.GapMM = &gap
 	}
 }
 

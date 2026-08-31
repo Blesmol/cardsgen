@@ -5,8 +5,8 @@ package main
 type Config struct {
 	Paper    string  `toml:"paper"`     // "a4" or "letter"
 	Grid     string  `toml:"grid"`      // global default grid, e.g. "2x3"
-	MarginMM float64 `toml:"margin_mm"` // page margin in millimetres
-	GapMM    float64 `toml:"gap_mm"`    // gap between cards in millimetres
+	MarginMM *float64 `toml:"margin_mm"` // page margin in millimetres; nil means "use default"
+	GapMM    *float64 `toml:"gap_mm"`    // gap between cards in millimetres; nil means "use default"
 
 	CategoryColors map[string]string `toml:"category_colors"` // category name -> CSS color
 
