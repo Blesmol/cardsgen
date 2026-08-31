@@ -407,7 +407,10 @@ func TestResolveConditionals(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := resolveConditionals(tc.content, tc.kv)
+			got, err := resolveConditionals(tc.content, tc.kv)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 			if got != tc.want {
 				t.Errorf("resolveConditionals(%q) = %q, want %q", tc.content, got, tc.want)
 			}
@@ -415,7 +418,20 @@ func TestResolveConditionals(t *testing.T) {
 	}
 }
 
-// writeTempFile writes content to name inside dir and returns the full path.
+func TestResolveConditionals_nestedReturnsError(t *testing.T) {
+	// Nested {if:} blocks are not supported; an explicit error is expected so
+	// the user gets a diagnostic instead of silently wrong output.
+	cases := []string{
+		"{if:a}{if:b}inner{endif}{endif}",
+		"{if:a}before{if:b}inner{endif}after{endif}",
+	}
+	for _, c := range cases {
+		_, err := resolveConditionals(c, map[string]string{"a": "1", "b": "1"})
+		if err == nil {
+			t.Errorf("expected error for nested if in %q, got nil", c)
+		}
+	}
+}
 func writeTempFile(t *testing.T, dir, name, content string) string {
 	t.Helper()
 	path := filepath.Join(dir, name)

@@ -407,15 +407,16 @@ func evalCondition(cond string, kv map[string]string) bool {
 
 // resolveConditionals evaluates {if:cond}...{else}...{endif} blocks in content,
 // keeping the then-branch or else-branch based on kv. Blocks without a matching
-// {endif} are emitted literally. No nesting is supported; a literal "{else}"
-// inside a then-block would be misinterpreted as the branch separator.
-func resolveConditionals(content string, kv map[string]string) string {
+// {endif} are emitted literally. Nesting ({if:} inside a block) is not supported
+// and returns an error so the user gets an explicit diagnostic instead of
+// silently wrong output.
+func resolveConditionals(content string, kv map[string]string) (string, error) {
 	var b strings.Builder
 	for {
 		loc := ifDirective.FindStringIndex(content)
 		if loc == nil {
 			b.WriteString(content)
-			return b.String()
+			return b.String(), nil
 		}
 		b.WriteString(content[:loc[0]])
 		condStr := content[loc[0]+4 : loc[1]-1] // skip "{if:" prefix and "}" suffix
@@ -427,6 +428,9 @@ func resolveConditionals(content string, kv map[string]string) string {
 			continue
 		}
 		block := rest[:endifIdx]
+		if ifDirective.MatchString(block) {
+			return "", fmt.Errorf("nested {if:} blocks are not supported")
+		}
 		content = rest[endifIdx+len("{endif}"):]
 		thenPart, elsePart, _ := strings.Cut(block, "{else}")
 		if evalCondition(condStr, kv) {
@@ -449,7 +453,10 @@ func applyTemplate(tmpl, tmplDir string, kv map[string]string, srcPath string) (
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", srcPath, err)
 	}
-	conditioned := resolveConditionals(expanded, kv)
+	conditioned, err := resolveConditionals(expanded, kv)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", srcPath, err)
+	}
 	result := templatePlaceholder.ReplaceAllStringFunc(conditioned, func(match string) string {
 		key := match[1 : len(match)-1]
 		if val, ok := kv[key]; ok {
