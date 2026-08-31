@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -35,7 +36,7 @@ var paperSizes = map[string]PaperSize{
 func loadConfig(path string) (Config, error) {
 	def := defaultConfig()
 
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
 		fmt.Fprintf(os.Stderr, "no config found; writing commented template to %s\n", path)
 		if werr := writeConfigTemplate(path); werr != nil {
 			return def, fmt.Errorf("writing config template %q: %w", path, werr)

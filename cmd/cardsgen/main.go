@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -184,7 +185,7 @@ func pandocShouldRun(noPandoc bool) bool { return !noPandoc }
 // warnRemove removes path and writes a warning to w if the removal fails for
 // any reason other than the file not existing.
 func warnRemove(path string, w io.Writer) {
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
 		fmt.Fprintf(w, "warning: removing %s: %v\n", path, err)
 	}
 }
