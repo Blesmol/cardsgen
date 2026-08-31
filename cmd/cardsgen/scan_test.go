@@ -396,6 +396,56 @@ func TestResolveConditionals(t *testing.T) {
 	}
 }
 
+// writeTempFile writes content to name inside dir and returns the full path.
+func writeTempFile(t *testing.T, dir, name, content string) string {
+	t.Helper()
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestResolveIncludes_selfCycle(t *testing.T) {
+	dir := t.TempDir()
+	writeTempFile(t, dir, "self.md", "{include:self.md}")
+	_, err := resolveIncludes("{include:self.md}", dir)
+	if err == nil {
+		t.Fatal("expected cycle error, got nil")
+	}
+	if !strings.Contains(err.Error(), "cycle") {
+		t.Errorf("error %q should mention 'cycle'", err.Error())
+	}
+}
+
+func TestResolveIncludes_indirectCycle(t *testing.T) {
+	dir := t.TempDir()
+	writeTempFile(t, dir, "a.md", "{include:b.md}")
+	writeTempFile(t, dir, "b.md", "{include:a.md}")
+	_, err := resolveIncludes("{include:a.md}", dir)
+	if err == nil {
+		t.Fatal("expected cycle error for A→B→A, got nil")
+	}
+	if !strings.Contains(err.Error(), "cycle") {
+		t.Errorf("error %q should mention 'cycle'", err.Error())
+	}
+}
+
+func TestResolveIncludes_diamondAllowed(t *testing.T) {
+	dir := t.TempDir()
+	writeTempFile(t, dir, "d.md", "shared\n")
+	writeTempFile(t, dir, "b.md", "B\n{include:d.md}")
+	writeTempFile(t, dir, "c.md", "C\n{include:d.md}")
+	// Root includes B and C; both include D — diamond, not a cycle.
+	got, err := resolveIncludes("{include:b.md}\n{include:c.md}", dir)
+	if err != nil {
+		t.Fatalf("diamond include should not error: %v", err)
+	}
+	if !strings.Contains(got, "shared") {
+		t.Errorf("expected 'shared' in output, got %q", got)
+	}
+}
+
 func TestApplyTemplate_conditionals(t *testing.T) {
 	tmpl := "{if:name}Hello {name}!{else}Hello stranger!{endif}"
 	t.Run("key present", func(t *testing.T) {

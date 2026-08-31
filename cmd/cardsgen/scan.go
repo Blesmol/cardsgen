@@ -354,8 +354,13 @@ func parseKVFile(path string) (map[string]string, error) {
 // resolveIncludes expands {include:path} directives in content by reading the
 // referenced file relative to dir. Included files are processed recursively so
 // their own {include:...} directives (resolved relative to their own directory)
-// are expanded as well.
+// are expanded as well. A cycle (a file that directly or indirectly includes
+// itself) is detected and returned as an error.
 func resolveIncludes(content, dir string) (string, error) {
+	return resolveIncludesInner(content, dir, map[string]bool{})
+}
+
+func resolveIncludesInner(content, dir string, inProgress map[string]bool) (string, error) {
 	var firstErr error
 	result := includeDirective.ReplaceAllStringFunc(content, func(match string) string {
 		if firstErr != nil {
@@ -363,12 +368,18 @@ func resolveIncludes(content, dir string) (string, error) {
 		}
 		relPath := match[len("{include:") : len(match)-1]
 		absPath := filepath.Join(dir, filepath.FromSlash(relPath))
+		if inProgress[absPath] {
+			firstErr = fmt.Errorf("include cycle detected: %s is already being included", relPath)
+			return ""
+		}
 		data, err := os.ReadFile(absPath)
 		if err != nil {
 			firstErr = fmt.Errorf("include %s: %w", relPath, err)
 			return ""
 		}
-		expanded, err := resolveIncludes(stripBOM(string(data)), filepath.Dir(absPath))
+		inProgress[absPath] = true
+		expanded, err := resolveIncludesInner(stripBOM(string(data)), filepath.Dir(absPath), inProgress)
+		delete(inProgress, absPath)
 		if err != nil {
 			firstErr = err
 			return ""
