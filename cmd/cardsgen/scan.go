@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/csv"
 	"fmt"
 	"os"
@@ -18,6 +19,10 @@ var imageExtensions = []string{".png", ".jpg", ".jpeg", ".webp", ".gif"}
 
 // stripBOM removes a UTF-8 BOM that Windows editors sometimes prepend.
 func stripBOM(s string) string { return strings.TrimPrefix(s, "\xEF\xBB\xBF") }
+
+// stripBOMBytes is the []byte variant of stripBOM, used where the data is
+// already in byte-slice form to avoid an unnecessary round-trip to string.
+func stripBOMBytes(b []byte) []byte { return bytes.TrimPrefix(b, []byte("\xEF\xBB\xBF")) }
 
 var kvKeyLine = regexp.MustCompile(`^([^\s:]+):\s*(.*)$`)
 var templatePlaceholder = regexp.MustCompile(`\{([^}]+)\}`)
@@ -527,7 +532,7 @@ func parseYAMLItems(path string) ([]map[string]string, error) {
 	}
 
 	var top interface{}
-	if err := yaml.Unmarshal([]byte(stripBOM(string(data))), &top); err != nil {
+	if err := yaml.Unmarshal(stripBOMBytes(data), &top); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
 

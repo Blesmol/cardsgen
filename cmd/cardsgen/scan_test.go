@@ -110,6 +110,25 @@ func TestParseYAMLItems_invalidYAML(t *testing.T) {
 	}
 }
 
+func TestParseYAMLItems_withBOM(t *testing.T) {
+	// Windows editors sometimes prepend a UTF-8 BOM; the parser must strip it
+	// directly on bytes without a []byte→string→[]byte round-trip.
+	path := writeTemp(t, "bom.yml", "\xEF\xBB\xBFname: BOMTest\nval: 7\n")
+	items, err := parseYAMLItems(path)
+	if err != nil {
+		t.Fatalf("unexpected error parsing YAML with BOM: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("want 1 item, got %d", len(items))
+	}
+	if got := items[0]["name"]; got != "BOMTest" {
+		t.Errorf("name = %q, want %q", got, "BOMTest")
+	}
+	if got := items[0]["val"]; got != "7" {
+		t.Errorf("val = %q, want %q", got, "7")
+	}
+}
+
 func TestDetectCSVSeparator(t *testing.T) {
 	tests := []struct {
 		name    string
