@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 	"path/filepath"
 	"strings"
 )
@@ -80,8 +81,10 @@ func cssName(s string) string {
 	return b.String()
 }
 
-// fileURL converts a local filesystem path into a file:// URL that weasyprint
-// can resolve on any platform.
+// fileURL converts a local filesystem path into a properly percent-encoded
+// file:// URL that weasyprint can resolve on any platform. Percent-encoding
+// ensures characters such as spaces or single quotes are safe inside a CSS
+// url('...') value.
 func fileURL(p string) string {
 	abs, err := filepath.Abs(p)
 	if err != nil {
@@ -91,5 +94,6 @@ func fileURL(p string) string {
 	if !strings.HasPrefix(s, "/") {
 		s = "/" + s // Windows drive paths like C:/...
 	}
-	return "file://" + s
+	u := &url.URL{Scheme: "file", Path: s}
+	return u.String()
 }
