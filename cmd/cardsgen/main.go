@@ -27,7 +27,7 @@ func run() error {
 	grid := flag.String("grid", "", "global grid override as COLUMNSxROWS, e.g. 2x3")
 	margin := flag.Float64("margin", -1, "page margin override in millimetres")
 	gap := flag.Float64("gap", -1, "gap between cards override in millimetres")
-	doPandoc := flag.Bool("pandoc", true, "run pandoc to produce the PDF")
+	noPandoc := flag.Bool("no-pandoc", false, "skip running pandoc to produce the PDF")
 	doHTML := flag.Bool("html", false, "also produce a standalone HTML file (generated.html)")
 	keepMD := flag.Bool("md", false, "keep the generated markdown and CSS files (generated.md, generated.css)")
 	flag.Parse()
@@ -109,7 +109,7 @@ func run() error {
 
 	fmt.Printf("scanned %d categories, %d cards\n", len(categories), countItems(categories))
 
-	if *doPandoc {
+	if pandocShouldRun(*noPandoc) {
 		if err := checkTools(true); err != nil {
 			return err
 		}
@@ -177,6 +177,9 @@ func countItems(categories []Category) int {
 	}
 	return n
 }
+
+// pandocShouldRun returns true when the --no-pandoc flag was not set.
+func pandocShouldRun(noPandoc bool) bool { return !noPandoc }
 
 // warnRemove removes path and writes a warning to w if the removal fails for
 // any reason other than the file not existing.

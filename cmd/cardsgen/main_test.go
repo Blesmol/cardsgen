@@ -48,3 +48,14 @@ func TestWarnRemove_unremovableFile(t *testing.T) {
 		t.Errorf("expected a warning message, got %q", w.String())
 	}
 }
+
+func TestPandocShouldRun(t *testing.T) {
+	// Default state: --no-pandoc not set → pandoc should run.
+	if !pandocShouldRun(false) {
+		t.Error("pandocShouldRun(false) should be true (pandoc runs by default)")
+	}
+	// --no-pandoc set → pandoc should be skipped.
+	if pandocShouldRun(true) {
+		t.Error("pandocShouldRun(true) should be false (--no-pandoc disables pandoc)")
+	}
+}
